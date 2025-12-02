@@ -1,32 +1,55 @@
-# Prototype Induction – Spécifications fonctionnelles
+# Prototype Induction – Spécifications fonctionnelles métier
 
 ## 1. Contexte
-Cette page présente un parcours de planification d’induction en cinq étapes. On commence par poser la prévision long terme puis on affine l’horizon, on définit le workscope et la fenêtre atelier, on ajoute les ajustements du planner et on finit par confirmer la demande. C’est une maquette destinée à illustrer le flux sans faire de traitement réel.
+Maquette expert de l’Induction Planning : on déroule les cinq phases métier qui vont de la prévision long terme à la demande confirmée. L’objectif est de faire visualiser chaque arbitrage sans intégration système, en accompagnant le pilote ou le planner au travers des décisions clés (probabilité, slot, ajustement). Le parcours reste purement démonstratif et pédagogique.
 
-## 2. Données
-- L’utilisateur renseigne les éléments essentiels : le moteur (ESN), le type de moteur, le client, le module ou la visite, la probabilité, l’horizon (en mois), le shop préféré et la priorité.  
-- Ensuite on complète les informations sur la phase en cours, les risques, la durée et la fenêtre du slot, et les ajustements à apporter (motif, décalage de date, commentaires).  
-- À la fin, des éléments validés s’affichent : date et shop confirmés, niveau de confiance, liste de petites “puces” résumé et un bloc texte qui reprend toutes les données de façon structurée.
+## 2. Données (champ par champ)
+- **ESN moteur** (liste déroulante) : code moteur, ex. `ESN-728394 – LEAP-1A – Client A`.  
+- **Type de moteur** (liste déroulante) : `LEAP-1A`, `LEAP-1B`, `CFM56-7B`.  
+- **Client** (liste déroulante) : acteurs comme `Client A`, `Client B`, `Client C`.  
+- **Module / visite** (liste déroulante) : `Full Engine`, `Module Fan`, `Module HPC`.  
+- **Probabilité long terme** (curseur 10–90 %) : affichage immédiat en pourcentage.  
+- **Horizon (mois)** (champ numérique) : intervalle 3–18 mois.  
+- **Priorité client** (curseur 1–5) : interprété “basse / moyenne / élevée”.  
+- **Shop préféré** (liste déroulante) : `Shop X (Europe)`, `Shop Y (Amériques)`, `Shop Z (Asie)`.  
+- **Phase opérationnelle** (liste) : `Induction Plan`, `Initial Request`, `Final Request`.  
+- **Mois restants** (nombre) : estimation de l’écart en mois.  
+- **Probabilité phase** (curseur 50–100 %).  
+- **Risque opérationnel** (curseur 1–5).  
+- **Confiance planner** (curseur 1–5).  
+- **Workscope** (champ texte libre) : description métier du scope.  
+- **Shop window start / end** (mois) : début et fin de la fenêtre atelier ciblée.  
+- **Durée (jours)** (nombre) : ex. 45 jours.  
+- **Shop final** (liste) : confirmation du site atelier.  
+- **Flexibilité slot** (curseur 1–5).  
+- **Motif ajustement** (texte) : justification planner (urgences, contraintes).  
+- **Décalage de date (semaines)** (nombre) : e.g. +2 semaines ou -1 semaine.  
+- **Priorité ajustée** (curseur).  
+- **Commentaire libre** (texte).  
+- **Date confirmée** (mois) : induction month.  
+- **Confiance finale** (curseur 50–100 %).
 
-Les données restent uniquement dans la page : rien n’est enregistré sur un serveur.
+Toutes ces données sont maintenues dans une fiche interne (`state`) et restent en session navigateur : aucune persistance, aucun appel API.
 
-## 3. Interface
-- Une seule page, centrée sur un panneau blanc avec un bandeau en haut qui montre les cinq étapes numérotées.  
-- Chaque étape contient deux colonnes de cartes : la colonne de gauche avec les champs à remplir et la colonne de droite avec les retours ou ajustements.  
-- Les champs sont simples (listes déroulantes, curseurs, champs numériques ou texte) pour que tout le monde comprenne ce qu’il faut saisir.  
-- Les zones de résultat décrivent ce que la saisie produit (“Proposition de slot pour …”, “Décision planner : …”).  
-- En bas, des boutons “Précédent” / “Étape suivante” permettent d’avancer ou revenir, avec un texte qui rappelle l’endroit où l’on se trouve.  
-- La dernière étape affiche aussi des pastilles synthétiques et un encadré texte prêt à être réutilisé dans un autre outil.
+## 3. Interface (entrées / sorties étape par étape)
+- **Étape 1 – Plan long terme** : saisie ESN, type, client, module, probabilité/horizon ; la colonne de droite présente le texte métier “Création d’une entrée Induction Plan…” ainsi que les ajustements de priorité/shop.  
+- **Étape 2 – Horizon & probabilités** : sélection de la phase, mois restants, curseurs risque/confiance ; sortie textuelle décrit la phase actuelle, le statu et la probabilité.  
+- **Étape 3 – Workscope & window** : fields workscope, fenêtre (début/fin), durée, shop cible, flexibilité ; retour synthétise la proposition de slot et son impact capacitaire.  
+- **Étape 4 – Ajustements planner** : motif, décalage, priorité, commentaire ; la colonne droite rend compte de la décision (“slot décalé de +1 semaine, priorité à 4”).  
+- **Étape 5 – Confirmation** : date finale, shop validé, confiance ; la sortie affiche des chips métiers (ESN, magasin, induction, confiance) et un bloc JSON qui reprend toutes les informations pour alimenter les référentiels (simulé).  
+- **Navigation** : stepper numéroté (5 pastilles), boutons « Précédent » / « Étape suivante » + hint textuel “Étape X/5 – …”.
 
-## 4. Règles
-- Chaque étape s’affiche ou se cache : il n’y a pas de validation bloquante, c’est un déroulé guidé.  
-- Dès qu’un champ est modifié, les textes de retour se mettent à jour pour expliquer ce que cela change.  
-- Si une information manque, un message l’indique clairement (“En attente de données…”).  
-- Les curseurs de priorité ou de flexibilité produisent aussi des phrases simples (ex. “slot décalé de +1 semaine”, “confiance forte”).  
-- L’objet “payload” affiché à la fin est une suggestion : rien n’est envoyé automatiquement, c’est juste pour copier-coller.
+## 4. Règles métiers
+- Le parcours reste guidé : `showStep()` bascule l’affichage sans validation bloquante.  
+- Chaque champ déclenche `updateStepX()` et met immédiatement à jour les textes métier, pour que l’utilisateur voie l’impact d’un ajustement en temps réel.  
+- En l’absence d’un champ critique, un message indique “En attente de données…”.  
+- Les curseurs traduisent des échelles métiers (“priorité élevée”, “flexibilité très forte”, “confiance prudente”).  
+- Les ajustements planner (motif, décalage, priorité, commentaire) produisent un libellé clair reflétant la décision.  
+- Le JSON final est un export visuel pour alimenter un ticket/manual entry : il n’est pas envoyé automatiquement.
 
 ## 5. Technique
-- Le prototype tient en un seul fichier : du HTML pour la structure, un style intégré pour les couleurs, et un script pour mettre à jour les textes en direct.  
-- Une petite “fiche” interne rassemble toutes les informations saisies : ça permet de réutiliser les mêmes données dans toutes les étapes sans complexité.  
-- Les éléments visuels sont basés sur des composants standards (cartes, champs, boutons) et la mise en page s’adapte aux petits écrans en passant de deux colonnes à une seule.  
-- La palette reste très claire pour que la lecture soit facile, avec des contours doux et quelques ombres pour détacher chaque bloc.
+- Prototype autonome : tout est contenu dans un seul fichier HTML avec CSS/JS inline, pas de framework.  
+- Toutes les valeurs sont stockées dans un objet `state` global, partagé par les fonctions `updateStep1` à `updateStep5`.  
+- L’interface utilise le DOM classique (select, input, buttons) et met à jour les contenus via `innerHTML`, `textContent` et `querySelector`.  
+- La mise en page repose sur des cartes et une grille responsive qui passe de deux colonnes à une seule sous 860px.  
+- Le design repose sur des variables CSS pour les couleurs, bordures, rayons et ombres, afin de garder un rendu léger et professionnel.
