@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Prototype Induction Planning – 5 étapes</title>
+    <style>
+        :root {
+            --bg: #fbfbff;
+            --card: #ffffff;
+            --accent: #3b82f6;
+            --accent-soft: rgba(59, 130, 246, 0.18);
+            --accent-ok: #22c55e;
+            --accent-warn: #fb923c;
+            --text: #0f172a;
+            --muted: #94a3b8;
+            --border: #e5e7eb;
+            --radius-lg: 16px;
+            --radius-pill: 999px;
+            --shadow-soft: 0 12px 30px rgba(15, 23, 42, 0.08);
+            --transition-fast: 0.2s ease-out;
+            --font-main: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background: #fbfbff;
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 32px 16px;
+        }
+
+        .app {
+            width: 100%;
+            max-width: 1080px;
+            background: #ffffff;
+            border-radius: 26px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-soft);
+            padding: 24px 28px 28px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+            gap: 12px;
+        }
+
+        header h1 {
+            font-size: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        header h1 span.badge {
+            font-size: 0.8rem;
+            padding: 4px 10px;
+            border-radius: var(--radius-pill);
+            background: rgba(37, 99, 235, 0.15);
+            color: var(--accent);
+            border: 1px solid rgba(37, 99, 235, 0.35);
+        }
+
+        header p {
+            font-size: 0.85rem;
+            color: var(--muted);
+        }
+
+        .stepper {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+
+        .step-pill {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            border-radius: var(--radius-pill);
+            border: 1px solid var(--border);
+            font-size: 0.8rem;
+            color: var(--muted);
+            background: #f8fafc;
+            white-space: nowrap;
+            transition: var(--transition-fast);
+        }
+
+        .step-pill span.index {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #e2e8f0;
+            border: 1px solid var(--border);
+            font-size: 0.75rem;
+            color: var(--text);
+        }
+
+        .step-pill.active {
+            border-color: var(--accent);
+            background: rgba(37, 99, 235, 0.12);
+            color: var(--text);
+        }
+
+        .step-pill.active span.index {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+        }
+
+        .step-pill.done {
+            border-color: rgba(22, 163, 74, 0.45);
+            background: rgba(22, 163, 74, 0.08);
+            color: var(--accent-ok);
+        }
+
+        .step-pill.done span.index {
+            background: var(--accent-ok);
+            color: #fff;
+            border-color: var(--accent-ok);
+        }
+
+        .steps-container {
+            position: relative;
+        }
+
+        .step {
+            display: none;
+            gap: 16px;
+            margin-bottom: 16px;
+            animation: fadeInUp 0.25s ease-out;
+        }
+
+        .step.active {
+            display: grid;
+        }
+
+        @media (min-width: 860px) {
+            .step {
+                grid-template-columns: 7fr 5fr;
+            }
+        }
+
+        @media (max-width: 859px) {
+            .step {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .column {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+            padding: 14px 14px 16px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: rgba(59, 130, 246, 0.12);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity var(--transition-fast);
+        }
+
+        .card:hover::before {
+            opacity: 1;
+        }
+
+        .card h2 {
+            font-size: 0.95rem;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .card h2 span.label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted);
+        }
+
+        .card small {
+            font-size: 0.75rem;
+            color: var(--muted);
+        }
+
+        .card-section-title {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted);
+            margin-bottom: 8px;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-bottom: 8px;
+        }
+
+        .field label {
+            font-size: 0.8rem;
+            color: var(--muted);
+        }
+
+        .field-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        input[type="month"],
+        select {
+            background: #fdfdff;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 6px 9px;
+            font-size: 0.85rem;
+            outline: none;
+            min-height: 32px;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        input[type="month"]:focus,
+        select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.45);
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--accent);
+        }
+
+        .pill-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 4px;
+        }
+
+        .pill {
+            font-size: 0.8rem;
+            padding: 3px 9px;
+            border-radius: var(--radius-pill);
+            border: 1px solid var(--border);
+            color: var(--muted);
+            background: #fdfdff;
+        }
+
+        .pill.accent {
+            border-color: rgba(37, 99, 235, 0.6);
+            color: var(--accent);
+            background: rgba(37, 99, 235, 0.08);
+        }
+
+        .pill.soft-ok {
+            border-color: rgba(22, 163, 74, 0.6);
+            color: var(--accent-ok);
+            background: rgba(22, 163, 74, 0.08);
+        }
+
+        .pill.soft-warn {
+            border-color: rgba(249, 115, 22, 0.6);
+            color: var(--accent-warn);
+            background: rgba(249, 115, 22, 0.08);
+        }
+
+        .result-block {
+            font-size: 0.85rem;
+            line-height: 1.5;
+            padding: 8px 10px;
+            border-radius: 10px;
+            background: #f8fbff;
+            border: 1px dashed rgba(148, 163, 184, 0.45);
+            color: var(--text);
+            min-height: 54px;
+        }
+
+        .result-block span.highlight {
+            color: var(--accent);
+        }
+
+        .result-block span.ok {
+            color: var(--accent-ok);
+        }
+
+        .result-block span.warn {
+            color: var(--accent-warn);
+        }
+
+        .inline-hint {
+            font-size: 0.75rem;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        .nav-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 6px;
+            padding-top: 10px;
+            border-top: 1px solid var(--border);
+            gap: 8px;
+        }
+
+        .nav-footer small {
+            font-size: 0.75rem;
+            color: var(--muted);
+        }
+
+        .buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        button {
+            border-radius: var(--radius-pill);
+            border: 1px solid transparent;
+            padding: 7px 14px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: var(--transition-fast);
+            background: transparent;
+            color: var(--text);
+        }
+
+        button[disabled] {
+            opacity: 0.4;
+            cursor: default;
+        }
+
+        .btn-secondary {
+            border-color: var(--border);
+            background: #fff;
+        }
+
+        .btn-secondary:hover:not([disabled]) {
+            border-color: rgba(15, 23, 42, 0.15);
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #fff;
+            border-color: transparent;
+            box-shadow: 0 8px 22px rgba(37, 99, 235, 0.35);
+        }
+
+        .btn-primary:hover:not([disabled]) {
+            transform: translateY(-1px);
+            box-shadow: 0 11px 26px rgba(37, 99, 235, 0.45);
+        }
+
+        .btn-ghost {
+            border-color: rgba(148, 163, 184, 0.6);
+            background: #fff;
+            font-size: 0.75rem;
+        }
+
+        .badge-proba {
+            font-size: 0.8rem;
+            padding: 2px 8px;
+            border-radius: var(--radius-pill);
+            border: 1px solid rgba(148, 163, 184, 0.5);
+            color: var(--muted);
+            background: #f8fafc;
+        }
+
+        .badge-proba span.value {
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        .summary-chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 6px;
+        }
+
+        .summary-chip {
+            font-size: 0.78rem;
+            padding: 4px 9px;
+            border-radius: var(--radius-pill);
+            border: 1px solid var(--border);
+            background: #f8fafc;
+            color: var(--text);
+        }
+
+        .summary-text {
+            font-size: 0.9rem;
+            margin-top: 6px;
+            line-height: 1.6;
+            color: var(--text);
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(6px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app">
+        <header>
+            <div>
+                <h1>🛠️ Induction Journey <span class="badge">Prototype 5 étapes</span></h1>
+                <p>De la prévision de dépose moteur à la demande d’induction confirmée.</p>
+            </div>
+            <button class="btn-ghost" type="button">
+                🌐 Mode démonstration
+            </button>
+        </header>
+
+        <!-- Stepper -->
+        <div class="stepper" id="stepper">
+            <div class="step-pill active" data-step-pill="1">
+                <span class="index">1</span> Plan long terme
+            </div>
+            <div class="step-pill" data-step-pill="2">
+                <span class="index">2</span> Horizon & probas
+            </div>
+            <div class="step-pill" data-step-pill="3">
+                <span class="index">3</span> Workscope & slots
+            </div>
+            <div class="step-pill" data-step-pill="4">
+                <span class="index">4</span> Ajustements planner
+            </div>
+            <div class="step-pill" data-step-pill="5">
+                <span class="index">5</span> Demande confirmée
+            </div>
+        </div>
+
+        <div class="steps-container">
+            <!-- ÉTAPE 1 -->
+            <section class="step active" data-step="1">
+                <div class="column">
+                    <div class="card">
+                        <h2>🔍 Étape 1 – <span class="label">Induction Planning (KDD IP1)</span></h2>
+                        <small>Saisir une prévision de dépose moteur à 3–18 mois.</small>
+
+                        <div style="height:10px"></div>
+                        <div class="card-section-title">Entrées</div>
+
+                        <div class="field">
+                            <label for="esn">ESN moteur</label>
+                            <select id="esn">
+                                <option value="">Sélectionner un ESN…</option>
+                                <option value="ESN-728394">ESN-728394 – LEAP-1A – Client A</option>
+                                <option value="ESN-554201">ESN-554201 – LEAP-1B – Client B</option>
+                                <option value="ESN-993120">ESN-993120 – CFM56-7B – Client C</option>
+                            </select>
+                        </div>
+
+                        <div class="field-row">
+                            <div class="field" style="flex:1 1 140px;">
+                                <label for="engineType">Type moteur</label>
+                                <select id="engineType">
+                                    <option value="">Choisir…</option>
+                                    <option value="LEAP-1A">LEAP-1A</option>
+                                    <option value="LEAP-1B">LEAP-1B</option>
+                                    <option value="CFM56-7B">CFM56-7B</option>
+                                </select>
+                            </div>
+                            <div class="field" style="flex:1 1 140px;">
+                                <label for="client">Client</label>
+                                <select id="client">
+                                    <option value="">Choisir…</option>
+                                    <option value="Client A">Client A</option>
+                                    <option value="Client B">Client B</option>
+                                    <option value="Client C">Client C</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="field-row">
+                            <div class="field" style="flex:1 1 120px;">
+                                <label for="module">Type de visite / module</label>
+                                <select id="module">
+                                    <option value="">Choisir…</option>
+                                    <option value="Full Engine">Full Engine</option>
+                                    <option value="Module Fan">Module Fan</option>
+                                    <option value="Module HPC">Module HPC</option>
+                                </select>
+                            </div>
+                            <div class="field" style="flex:1 1 120px;">
+                                <label for="probStep1">Probabilité d’induction</label>
+                                <input type="range" id="probStep1" min="10" max="90" value="50" />
+                                <div class="inline-hint">
+                                    <span class="badge-proba">Prévision long terme : <span id="probStep1Label"
+                                            class="value">50%</span></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="field-row">
+                            <div class="field" style="flex:1 1 120px;">
+                                <label for="horizonMonths">Horizon (mois)</label>
+                                <input type="number" id="horizonMonths" min="3" max="18" value="12" />
+                                <div class="inline-hint">Entre 3 et 18 mois.</div>
+                            </div>
+                        </div>
+
+                        <div class="pill-row">
+                            <span class="pill accent">🎯 Candidats Induction Plan</span>
+                            <span class="pill">ESN, moteur, client</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="column">
+                    <div class="card">
+                        <div class="card-section-title">Résultat (prévision créée)</div>
+                        <div class="result-block" id="resultStep1">
+                            En attente de données… sélectionne un ESN pour générer le plan.
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-section-title">Ajustements possibles</div>
+                        <div class="field">
+                            <label for="priorityStep1">Priorité client</label>
+                            <input type="range" id="priorityStep1" min="1" max="5" value="3" />
+                            <div class="inline-hint">1 = faible / 5 = critique.</div>
+                        </div>
+                        <div class="field">
+                            <label for="shopPrefStep1">Shops préférentiels</label>
+                            <select id="shopPrefStep1">
+                                <option value="">Laisser ouvert…</option>
+                                <option value="Shop X">Shop X (Europe)</option>
+                                <option value="Shop Y">Shop Y (Amériques)</option>
+                                <option value="Shop Z">Shop Z (Asie)</option>
+                            </select>
+                        </div>
+                        <div class="result-block" id="adjustStep1">
+                            Ajuste la priorité ou le shop pour voir l’impact perçu sur le plan long terme.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ÉTAPE 2 -->
+            <section class="step" data-step="2">
+                <div class="column">
+                    <div class="card">
+                        <h2>📐 Étape 2 – <span class="label">Planning Horizon (KDD IP2)</span></h2>
+                        <small>On rapproche l’induction : de l’Induction Plan à l’Initial Request.</small>
+
+                        <div style="height:10px"></div>
+                        <div class="card-section-title">Entrées</div>
+
+                        <div class="field-row">
+                            <div class="field" style="flex:1 1 120px;">
+                                <label for="phaseStep2">Phase</label>
+                                <select id="phaseStep2">
+                                    <option value="Induction Plan">3–18 mois – Induction Plan</option>
+                                    <option value="Initial Induction Request">3–6 mois – Initial Request</option>
+                                    <option value="Final Induction Request">0–3 mois – Final Request</option>
+                                </select>
+                            </div>
+                            <div class="field" style="flex:1 1 120px;">
+                                <label for="monthsRemainingStep2">Mois restants</label>
+                                <input type="number" id="monthsRemainingStep2" min="0" max="18" value="6" />
+                            </div>
+                        </div>
+
+                        <div class="field">
+                            <label for="probStep2">Probabilité d’induction</label>
+                            <input type="range" id="probStep2" min="50" max="100" value="80" />
+                            <div class="inline-hint">
+                                <span class="badge-proba">Probabilité : <span id="probStep2Label"
+                                        class="value">80%</span></span>
+                            </div>
+                        </div>
+
+                        <div class="pill-row">
+                            <span class="pill soft-warn">⏱️ 3–6 mois : ~80%</span>
+                            <span class="pill soft-ok">📌 0–3 mois : ~100%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="column">
+                    <div class="card">
+                        <div class="card-section-title">Résultat (niveau de maturité)</div>
+                        <div class="result-block" id="resultStep2">
+                            Ajuste la phase et la probabilité pour visualiser le statut d’induction.
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-section-title">Ajustements possibles</div>
+
+                        <div class="field-row">
+                            <div class="field" style="flex:1 1 120px;">
+                                <label for="riskStep2">Risque opérationnel perçu</label>
+                                <input type="range" id="riskStep2" min="1" max="5" value="2" />
+                                <div class="inline-hint">1 = faible, 5 = très élevé.</div>
+                            </div>
+                            <div class="field" style="flex:1 1 120px;">
+                                <label for="confidenceStep2">Confiance planner</label>
+                                <input type="range" id="confidenceStep2" min="1" max="5" value="4" />
+                            </div>
+                        </div>
+
+                        <div class="result-block" id="adjustStep2">
+                            Le planner pourra monter la phase en fonction du risque et de sa confiance métier.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ÉTAPE 3 -->
+            <section class="step" data-step="3">
+                <div class="column">
+                    <div class="card">
+                        <h2>🧩 Étape 3 – <span class="label">Planning Level & Dimensions (KDD IP3)</span></h2>
+                        <small>On enrichit la demande : workscope et fenêtre de slot atelier.</small>
+
+                        <div style="height:10px"></div>
+                        <div class="card-section-title">Entrées</div>
+
+                        <div class="field">
+                            <label for="workscopeStep3">Workscope prévu</label>
+                            <select id="workscopeStep3">
+                                <option value="">Choisir…</option>
+                                <option value="Inspection limitée">Inspection limitée</option>
+                                <option value="Shop Visit standard">Shop Visit standard</option>
+                                <option value="Overhaul complet">Overhaul complet</option>
+                            </select>
+                        </div>
+
+                        <div class="field-row">
+                            <div class="field" style="flex:1 1 120px;">
+                                <label for="shopWindowStart">Fenêtre slot – début</label>
+                                <input type="month" id="shopWindowStart" />
+                            </div>
+                            <div class="field" style="flex:1 1 120px;">
+                                <label for="shopWindowEnd">Fenêtre slot – fin</label>
+                                <input type="month" id="shopWindowEnd" />
+                            </div>
+                        </div>
+
+                        <div class="field">
+                            <label for="durationStep3">Durée estimée en atelier (jours)</label>
+                            <input type="number" id="durationStep3" min="5" max="180" value="45" />
+                        </div>
+
+                        <div class="pill-row">
+                            <span class="pill accent">📅 Fenêtre d’induction</span>
+                            <span class="pill">Durée estimée atelier</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="column">
+                    <div class="card">
+                        <div class="card-section-title">Résultat (proposition de slot)</div>
+                        <div class="result-block" id="resultStep3">
+                            Renseigne le workscope et la fenêtre de slot pour générer une proposition.
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-section-title">Ajustements possibles</div>
+
+                        <div class="field-row">
+                            <div class="field" style="flex:1 1 120px;">
+                                <label for="shopPrefStep3">Shop cible préféré</label>
+                                <select id="shopPrefStep3">
+                                    <option value="">Laisser optimiser…</option>
+                                    <option value="Shop X">Shop X – Capacité LEAP</option>
+                                    <option value="Shop Y">Shop Y – Capacité CFM56</option>
+                                </select>
+                            </div>
+                            <div class="field" style="flex:1 1 120px;">
+                                <label for="flexibilityStep3">Flexibilité dates</label>
+                                <input type="range" id="flexibilityStep3" min="0" max="4" value="2" />
+                                <div class="inline-hint">0 = date figée, 4 = très flexible.</div>
+                            </div>
+                        </div>
+
+                        <div class="result-block" id="adjustStep3">
+                            Le choix du shop et la flexibilité permettent d’optimiser les capacités atelier et la
+                            promesse client.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ÉTAPE 4 -->
+            <section class="step" data-step="4">
+                <div class="column">
+                    <div class="card">
+                        <h2>🧠 Étape 4 – <span class="label">Planner Adjustments (KDD IP8)</span></h2>
+                        <small>Ici, l’humain intervient pour arbitrer.</small>
+
+                        <div style="height:10px"></div>
+                        <div class="card-section-title">Entrées</div>
+
+                        <div class="field">
+                            <label for="reasonStep4">Motif d’ajustement principal</label>
+                            <select id="reasonStep4">
+                                <option value="">Choisir…</option>
+                                <option value="Capacité atelier">Capacité atelier</option>
+                                <option value="Priorité client">Priorité client</option>
+                                <option value="Problème flotte / sécurité">Problème flotte / sécurité</option>
+                            </select>
+                        </div>
+
+                        <div class="field-row">
+                            <div class="field" style="flex:1 1 120px;">
+                                <label for="dateShiftStep4">Décalage date (semaines)</label>
+                                <input type="range" id="dateShiftStep4" min="-4" max="4" value="0" />
+                                <div class="inline-hint">Négatif = plus tôt, positif = plus tard.</div>
+                            </div>
+                            <div class="field" style="flex:1 1 120px;">
+                                <label for="priorityStep4">Nouvelle priorité</label>
+                                <input type="range" id="priorityStep4" min="1" max="5" value="3" />
+                            </div>
+                        </div>
+
+                        <div class="pill-row">
+                            <span class="pill accent">👤 Intervention planner</span>
+                            <span class="pill">Trace des décisions</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="column">
+                    <div class="card">
+                        <div class="card-section-title">Résultat (demande révisée)</div>
+                        <div class="result-block" id="resultStep4">
+                            Configure un motif et un décalage pour voir la version révisée de la demande.
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-section-title">Ajustements possibles</div>
+                        <div class="field">
+                            <label for="commentStep4">Commentaire planner (court)</label>
+                            <input type="text" id="commentStep4"
+                                placeholder="Ex : Slot avancé pour sécuriser la saison été…" />
+                        </div>
+                        <div class="result-block" id="adjustStep4">
+                            Ce commentaire sera visible par les rôles métier liés à la demande d’induction.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ÉTAPE 5 -->
+            <section class="step" data-step="5">
+                <div class="column">
+                    <div class="card">
+                        <h2>✅ Étape 5 – <span class="label">Create Induction Request Entry (KDD IP9)</span></h2>
+                        <small>On fige la demande d’induction confirmée en atelier.</small>
+
+                        <div style="height:10px"></div>
+                        <div class="card-section-title">Entrées</div>
+
+                        <div class="field-row">
+                            <div class="field" style="flex:1 1 120px;">
+                                <label for="finalDateStep5">Date d’induction confirmée</label>
+                                <input type="month" id="finalDateStep5" />
+                            </div>
+                            <div class="field" style="flex:1 1 120px;">
+                                <label for="finalShopStep5">Shop confirmé</label>
+                                <select id="finalShopStep5">
+                                    <option value="">Choisir…</option>
+                                    <option value="Shop X">Shop X</option>
+                                    <option value="Shop Y">Shop Y</option>
+                                    <option value="Shop Z">Shop Z</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="field">
+                            <label for="finalConfidenceStep5">Confiance globale (planner)</label>
+                            <input type="range" id="finalConfidenceStep5" min="50" max="100" value="95" />
+                            <div class="inline-hint">
+                                <span class="badge-proba">Confiance : <span id="finalConfidenceStep5Label"
+                                        class="value">95%</span></span>
+                            </div>
+                        </div>
+
+                        <div class="pill-row">
+                            <span class="pill soft-ok">🔒 Demande figée</span>
+                            <span class="pill">Propagation vers planning & supply</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="column">
+                    <div class="card">
+                        <div class="card-section-title">Résultat (récapitulatif Induction Request)</div>
+                        <div class="result-block" id="resultStep5">
+                            Le récapitulatif complet s’affichera ici à partir des étapes précédentes.
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-section-title">Trace & synthèse</div>
+                        <div class="summary-chip-row" id="summaryChips">
+                            <!-- chips dynamiques -->
+                        </div>
+                        <div class="summary-text" id="summaryText">
+                            Tu peux utiliser ce bloc comme base pour une “Induction Request Entry” structurée (ex :
+                            JSON, API, ticket).
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Footer navigation -->
+        <div class="nav-footer">
+            <small id="stepHint">Étape 1/5 – Création du plan long terme.</small>
+            <div class="buttons">
+                <button class="btn-secondary" type="button" id="prevBtn" disabled>← Précédent</button>
+                <button class="btn-primary" type="button" id="nextBtn">Étape suivante →</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const state = {
+            esn: "",
+            engineType: "",
+            client: "",
+            module: "",
+            probStep1: 50,
+            horizonMonths: 12,
+            priorityStep1: 3,
+            shopPrefStep1: "",
+            phaseStep2: "Induction Plan",
+            monthsRemainingStep2: 6,
+            probStep2: 80,
+            riskStep2: 2,
+            confidenceStep2: 4,
+            workscopeStep3: "",
+            shopWindowStart: "",
+            shopWindowEnd: "",
+            durationStep3: 45,
+            shopPrefStep3: "",
+            flexibilityStep3: 2,
+            reasonStep4: "",
+            dateShiftStep4: 0,
+            priorityStep4: 3,
+            commentStep4: "",
+            finalDateStep5: "",
+            finalShopStep5: "",
+            finalConfidenceStep5: 95
+        };
+
+        let currentStep = 1;
+        const totalSteps = 5;
+
+        const stepElements = document.querySelectorAll(".step");
+        const stepPills = document.querySelectorAll(".step-pill");
+        const stepHint = document.getElementById("stepHint");
+        const prevBtn = document.getElementById("prevBtn");
+        const nextBtn = document.getElementById("nextBtn");
+
+        /* Helpers */
+        function showStep(step) {
+            currentStep = step;
+            stepElements.forEach(s => {
+                s.classList.toggle("active", Number(s.dataset.step) === step);
+            });
+
+            stepPills.forEach(pill => {
+                const index = Number(pill.dataset.stepPill);
+                pill.classList.toggle("active", index === step);
+                pill.classList.toggle("done", index < step);
+            });
+
+            prevBtn.disabled = step === 1;
+            nextBtn.textContent = step === totalSteps ? "Terminer" : "Étape suivante →";
+
+            const hints = {
+                1: "Étape 1/5 – Création du plan long terme.",
+                2: "Étape 2/5 – Ajustement de l’horizon et des probabilités.",
+                3: "Étape 3/5 – Définition du workscope et de la fenêtre atelier.",
+                4: "Étape 4/5 – Ajustements humains du planner.",
+                5: "Étape 5/5 – Demande d’induction confirmée."
+            };
+            stepHint.textContent = hints[step] || "";
+        }
+
+        function clamp(n, min, max) {
+            return Math.min(Math.max(n, min), max);
+        }
+
+        /* Étape 1 – Events */
+        const esnInput = document.getElementById("esn");
+        const engineTypeInput = document.getElementById("engineType");
+        const clientInput = document.getElementById("client");
+        const moduleInput = document.getElementById("module");
+        const probStep1Input = document.getElementById("probStep1");
+        const probStep1Label = document.getElementById("probStep1Label");
+        const horizonMonthsInput = document.getElementById("horizonMonths");
+        const priorityStep1Input = document.getElementById("priorityStep1");
+        const shopPrefStep1Input = document.getElementById("shopPrefStep1");
+        const resultStep1 = document.getElementById("resultStep1");
+        const adjustStep1 = document.getElementById("adjustStep1");
+
+        function updateStep1() {
+            state.esn = esnInput.value;
+            state.engineType = engineTypeInput.value;
+            state.client = clientInput.value;
+            state.module = moduleInput.value;
+            state.probStep1 = Number(probStep1Input.value);
+            state.horizonMonths = Number(horizonMonthsInput.value) || 12;
+            state.priorityStep1 = Number(priorityStep1Input.value);
+            state.shopPrefStep1 = shopPrefStep1Input.value;
+
+            probStep1Label.textContent = state.probStep1 + "%";
+
+            if (!state.esn || !state.engineType || !state.client) {
+                resultStep1.innerHTML = "En attente de données… renseigne ESN, moteur et client pour créer une entrée d’Induction Plan.";
+            } else {
+                resultStep1.innerHTML =
+                    `Création d’une entrée <span class="highlight">Induction Plan</span> pour <span class="highlight">${state.esn}</span> ` +
+                    `(${state.engineType}, ${state.client}).<br>` +
+                    `Horizon ≈ <span class="highlight">${state.horizonMonths} mois</span>, probabilité estimée <span class="warn">${state.probStep1}%</span>.`;
+            }
+
+            let prioLabel = "moyenne";
+            if (state.priorityStep1 <= 2) prioLabel = "basse";
+            if (state.priorityStep1 >= 4) prioLabel = "élevée";
+
+            const shopText = state.shopPrefStep1
+                ? `Shop préférentiel : <span class="highlight">${state.shopPrefStep1}</span>.`
+                : "Aucun shop préférentiel fixé pour l’instant.";
+
+            adjustStep1.innerHTML =
+                `Priorité client <span class="highlight">${state.priorityStep1}</span> (${prioLabel}). ${shopText}`;
+        }
+
+        [esnInput, engineTypeInput, clientInput, moduleInput,
+            probStep1Input, horizonMonthsInput,
+            priorityStep1Input, shopPrefStep1Input].forEach(el => {
+                el.addEventListener("input", updateStep1);
+            });
+
+        /* Étape 2 – Events */
+        const phaseStep2Input = document.getElementById("phaseStep2");
+        const monthsRemainingStep2Input = document.getElementById("monthsRemainingStep2");
+        const probStep2Input = document.getElementById("probStep2");
+        const probStep2Label = document.getElementById("probStep2Label");
+        const riskStep2Input = document.getElementById("riskStep2");
+        const confidenceStep2Input = document.getElementById("confidenceStep2");
+        const resultStep2 = document.getElementById("resultStep2");
+        const adjustStep2 = document.getElementById("adjustStep2");
+
+        function updateStep2() {
+            state.phaseStep2 = phaseStep2Input.value;
+            state.monthsRemainingStep2 = Number(monthsRemainingStep2Input.value) || 0;
+            state.probStep2 = Number(probStep2Input.value);
+            state.riskStep2 = Number(riskStep2Input.value);
+            state.confidenceStep2 = Number(confidenceStep2Input.value);
+
+            probStep2Label.textContent = state.probStep2 + "%";
+
+            let statusLabel = "prévision lointaine";
+            if (state.phaseStep2.includes("Initial")) statusLabel = "demande initiale en préparation";
+            if (state.phaseStep2.includes("Final")) statusLabel = "demande finalisée en attente de confirmation";
+
+            const colorClass = state.probStep2 >= 95 ? "ok" : state.probStep2 >= 80 ? "highlight" : "warn";
+
+            resultStep2.innerHTML =
+                `Phase actuelle : <span class="highlight">${state.phaseStep2}</span> ` +
+                `(≈ <span class="highlight">${state.monthsRemainingStep2} mois</span> restants).<br>` +
+                `Statut : ${statusLabel}. Probabilité estimée <span class="${colorClass}">${state.probStep2}%</span>.`;
+
+            let riskText = "faible";
+            if (state.riskStep2 >= 4) riskText = "élevé";
+            else if (state.riskStep2 >= 3) riskText = "modéré";
+
+            let confText = "prudente";
+            if (state.confidenceStep2 >= 4) confText = "confiance forte";
+            else if (state.confidenceStep2 <= 2) confText = "confiance faible";
+
+            adjustStep2.innerHTML =
+                `Risque opérationnel <span class="highlight">${state.riskStep2}</span> (${riskText}), ` +
+                `et ${confText} du planner.<br>` +
+                `Ces éléments permettront de décider du passage en phase supérieure ou non.`;
+        }
+
+        [phaseStep2Input, monthsRemainingStep2Input, probStep2Input,
+            riskStep2Input, confidenceStep2Input].forEach(el => {
+                el.addEventListener("input", updateStep2);
+            });
+
+        /* Étape 3 – Events */
+        const workscopeStep3Input = document.getElementById("workscopeStep3");
+        const shopWindowStartInput = document.getElementById("shopWindowStart");
+        const shopWindowEndInput = document.getElementById("shopWindowEnd");
+        const durationStep3Input = document.getElementById("durationStep3");
+        const shopPrefStep3Input = document.getElementById("shopPrefStep3");
+        const flexibilityStep3Input = document.getElementById("flexibilityStep3");
+        const resultStep3 = document.getElementById("resultStep3");
+        const adjustStep3 = document.getElementById("adjustStep3");
+
+        function updateStep3() {
+            state.workscopeStep3 = workscopeStep3Input.value;
+            state.shopWindowStart = shopWindowStartInput.value;
+            state.shopWindowEnd = shopWindowEndInput.value;
+            state.durationStep3 = Number(durationStep3Input.value) || 0;
+            state.shopPrefStep3 = shopPrefStep3Input.value;
+            state.flexibilityStep3 = Number(flexibilityStep3Input.value);
+
+            if (!state.workscopeStep3 || !state.shopWindowStart || !state.shopWindowEnd) {
+                resultStep3.innerHTML = "Renseigne le workscope et la fenêtre de slot pour générer une proposition structurée.";
+            } else {
+                resultStep3.innerHTML =
+                    `Proposition de slot pour <span class="highlight">${state.workscopeStep3}</span> :<br>` +
+                    `Fenêtre <span class="highlight">${state.shopWindowStart}</span> → <span class="highlight">${state.shopWindowEnd}</span>, ` +
+                    `durée estimée <span class="highlight">${state.durationStep3} jours</span>.`;
+            }
+
+            const flexLabels = ["figée", "peu flexible", "moyennement flexible", "flexible", "très flexible"];
+            const flexText = flexLabels[clamp(state.flexibilityStep3, 0, 4)] || "moyennement flexible";
+
+            const shop3Text = state.shopPrefStep3
+                ? `Shop cible : <span class="highlight">${state.shopPrefStep3}</span>. `
+                : "Shop à optimiser automatiquement. ";
+
+            adjustStep3.innerHTML =
+                `${shop3Text}Fenêtre considérée comme <span class="highlight">${flexText}</span> pour l’ordonnancement des capacités.`;
+        }
+
+        [workscopeStep3Input, shopWindowStartInput, shopWindowEndInput,
+            durationStep3Input, shopPrefStep3Input, flexibilityStep3Input].forEach(el => {
+                el.addEventListener("input", updateStep3);
+            });
+
+        /* Étape 4 – Events */
+        const reasonStep4Input = document.getElementById("reasonStep4");
+        const dateShiftStep4Input = document.getElementById("dateShiftStep4");
+        const priorityStep4Input = document.getElementById("priorityStep4");
+        const commentStep4Input = document.getElementById("commentStep4");
+        const resultStep4 = document.getElementById("resultStep4");
+        const adjustStep4 = document.getElementById("adjustStep4");
+
+        function updateStep4() {
+            state.reasonStep4 = reasonStep4Input.value;
+            state.dateShiftStep4 = Number(dateShiftStep4Input.value);
+            state.priorityStep4 = Number(priorityStep4Input.value);
+            state.commentStep4 = commentStep4Input.value;
+
+            let shiftText = "slot inchangé";
+            if (state.dateShiftStep4 > 0) shiftText = `slot décalé de +${state.dateShiftStep4} semaine(s)`;
+            if (state.dateShiftStep4 < 0) shiftText = `slot avancé de ${Math.abs(state.dateShiftStep4)} semaine(s)`;
+
+            const reasonText = state.reasonStep4
+                ? `Motif principal : <span class="highlight">${state.reasonStep4}</span>. `
+                : "";
+
+            resultStep4.innerHTML =
+                `${reasonText}Décision planner : ${shiftText}, ` +
+                `priorité mise à <span class="highlight">${state.priorityStep4}</span>.`;
+
+            adjustStep4.innerHTML =
+                state.commentStep4
+                    ? `Commentaire planner : « <span class="highlight">${state.commentStep4}</span> »`
+                    : "Ajoute un commentaire pour expliciter l’arbitrage auprès des métiers.";
+        }
+
+        [reasonStep4Input, dateShiftStep4Input, priorityStep4Input, commentStep4Input].forEach(el => {
+            el.addEventListener("input", updateStep4);
+        });
+
+        /* Étape 5 – Events */
+        const finalDateStep5Input = document.getElementById("finalDateStep5");
+        const finalShopStep5Input = document.getElementById("finalShopStep5");
+        const finalConfidenceStep5Input = document.getElementById("finalConfidenceStep5");
+        const finalConfidenceStep5Label = document.getElementById("finalConfidenceStep5Label");
+        const resultStep5 = document.getElementById("resultStep5");
+        const summaryChips = document.getElementById("summaryChips");
+        const summaryText = document.getElementById("summaryText");
+
+        function updateStep5() {
+            state.finalDateStep5 = finalDateStep5Input.value;
+            state.finalShopStep5 = finalShopStep5Input.value;
+            state.finalConfidenceStep5 = Number(finalConfidenceStep5Input.value);
+            finalConfidenceStep5Label.textContent = state.finalConfidenceStep5 + "%";
+
+            if (!state.finalDateStep5 || !state.finalShopStep5 || !state.esn) {
+                resultStep5.innerHTML =
+                    "Renseigne au minimum une date, un shop confirmé et un ESN (étape 1) pour figer la demande d’induction.";
+                return;
+            }
+
+            resultStep5.innerHTML =
+                `Demande d’induction confirmée pour <span class="highlight">${state.esn}</span> ` +
+                `(${state.engineType || "type moteur N/A"}, ${state.client || "client N/A"}).<br>` +
+                `Shop confirmé : <span class="highlight">${state.finalShopStep5}</span>, ` +
+                `date d’induction : <span class="highlight">${state.finalDateStep5}</span>.<br>` +
+                `Confiance globale planner : <span class="ok">${state.finalConfidenceStep5}%</span>.`;
+
+            summaryChips.innerHTML = "";
+            const chips = [
+                state.esn && `ESN : ${state.esn}`,
+                state.engineType && `Moteur : ${state.engineType}`,
+                state.client && `Client : ${state.client}`,
+                state.workscopeStep3 && `Workscope : ${state.workscopeStep3}`,
+                state.finalShopStep5 && `Shop : ${state.finalShopStep5}`,
+                state.finalDateStep5 && `Induction : ${state.finalDateStep5}`,
+                `Confiance : ${state.finalConfidenceStep5}%`
+            ].filter(Boolean);
+
+            chips.forEach(text => {
+                const span = document.createElement("span");
+                span.className = "summary-chip";
+                span.textContent = text;
+                summaryChips.appendChild(span);
+            });
+
+            const jsonPayload = {
+                esn: state.esn || null,
+                engineType: state.engineType || null,
+                client: state.client || null,
+                moduleOrVisitType: state.module || null,
+                probability_initial: state.probStep1,
+                horizon_months: state.horizonMonths,
+                phase: state.phaseStep2,
+                probability_phase: state.probStep2,
+                workscope: state.workscopeStep3 || null,
+                slot_window: {
+                    start: state.shopWindowStart || null,
+                    end: state.shopWindowEnd || null
+                },
+                duration_days: state.durationStep3,
+                planner_adjustments: {
+                    reason: state.reasonStep4 || null,
+                    date_shift_weeks: state.dateShiftStep4,
+                    new_priority: state.priorityStep4,
+                    comment: state.commentStep4 || null
+                },
+                confirmed_request: {
+                    shop: state.finalShopStep5,
+                    induction_month: state.finalDateStep5,
+                    confidence_planner: state.finalConfidenceStep5
+                }
+            };
+
+            summaryText.textContent =
+                "Payload Induction Request (exemple API) :\n" +
+                JSON.stringify(jsonPayload, null, 2);
+        }
+
+        [finalDateStep5Input, finalShopStep5Input, finalConfidenceStep5Input].forEach(el => {
+            el.addEventListener("input", updateStep5);
+        });
+
+        /* Navigation */
+        prevBtn.addEventListener("click", () => {
+            if (currentStep > 1) {
+                showStep(currentStep - 1);
+            }
+        });
+
+        nextBtn.addEventListener("click", () => {
+            if (currentStep < totalSteps) {
+                showStep(currentStep + 1);
+            } else {
+                alert("✨ Fin du parcours de démonstration. La demande d’induction est figée dans l’exemple.");
+            }
+        });
+
+        // Un petit init pour pré-remplir les résultats
+        updateStep1();
+        updateStep2();
+        updateStep3();
+        updateStep4();
+        updateStep5();
+    </script>
+</body>
+
+</html>
