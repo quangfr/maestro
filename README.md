@@ -1,4 +1,5 @@
 # Prototype Induction – Spécifications fonctionnelles métier
+(Lien)[induction.html]
 
 ## 1. Contexte
 Maquette expert de l’Induction Planning : on déroule les cinq phases métier qui vont de la prévision long terme à la demande confirmée. L’objectif est de faire visualiser chaque arbitrage sans intégration système, en accompagnant le pilote ou le planner au travers des décisions clés (probabilité, slot, ajustement). Le parcours reste purement démonstratif et pédagogique.
